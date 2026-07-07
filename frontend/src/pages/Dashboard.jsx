@@ -59,9 +59,10 @@ function Dashboard() {
 
     // fetch profile from backend to reliably determine admin status
     (async () => {
+      let role = null;
       try {
         const profileRes = await api.get(`/auth/profile`, { params: { userId } });
-        const role = profileRes.data?.data?.role;
+        role = profileRes.data?.data?.role;
         setIsAdmin(role === "admin");
         if (role) localStorage.setItem("userRole", role);
       } catch (err) {
