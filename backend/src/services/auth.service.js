@@ -14,6 +14,11 @@ export const registerUser = async (userData) => {
     lastName,
     email,
     role: "employee",
+    timeZone: "Asia/Manila",
+    schedule: {
+        startTime: "09:00",
+        endTime: "18:00"
+    },
     createdAt: new Date(),
   });
 
