@@ -15,6 +15,7 @@ import {
   getAdminReports,
   updateAttendance,
 } from "../services/attendanceService";
+import api from "../services/api";
 
 import DashboardHeader from "../components/DashboardHeader";
 import StatusCard from "../components/StatusCard";
@@ -38,7 +39,7 @@ function Dashboard() {
 
   const hasPunchedIn = !!today?.timeIn;
   const hasPunchedOut = !!today?.timeOut;
-  const isAdmin = localStorage.getItem("userRole") === "admin";
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const filteredAdminRecords = adminRecords.filter((item) => {
     const query = searchTerm.toLowerCase();
@@ -56,10 +57,23 @@ function Dashboard() {
       return;
     }
 
-    loadData();
+    // fetch profile from backend to reliably determine admin status
+    (async () => {
+      try {
+        const profileRes = await api.get(`/auth/profile`, { params: { userId } });
+        const role = profileRes.data?.data?.role;
+        setIsAdmin(role === "admin");
+        if (role) localStorage.setItem("userRole", role);
+      } catch (err) {
+        setIsAdmin(false);
+      }
+
+      // load dashboard data after role is determined
+      await loadData(role === "admin");
+    })();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (includeAdmin = isAdmin) => {
     setLoading(true);
 
     try {
@@ -76,7 +90,7 @@ function Dashboard() {
       setHistory([]);
     }
 
-    if (isAdmin) {
+    if (includeAdmin) {
       try {
         const adminRes = await getAdminAttendance(userId);
         setAdminRecords(adminRes.data.data || []);
