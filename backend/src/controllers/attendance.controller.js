@@ -3,6 +3,9 @@ import {
   punchOutService,
   getTodayAttendanceService,
   getAttendanceHistoryService,
+  getAdminAttendanceService,
+  updateAttendanceService,
+  getAdminReportsService,
 } from "../services/attendance.service.js";
 
 export const punchIn = async (req, res) => {
@@ -75,5 +78,41 @@ export const getAttendanceHistory = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+export const getAdminAttendance = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const records = await getAdminAttendanceService(userId);
+
+    res.json({ success: true, data: records });
+  } catch (error) {
+    res.status(403).json({ success: false, message: error.message });
+  }
+};
+
+export const updateAttendance = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const { attendanceId } = req.params;
+    const updates = req.body.updates || {};
+
+    await updateAttendanceService(attendanceId, updates, userId);
+
+    res.json({ success: true, message: "Attendance updated successfully." });
+  } catch (error) {
+    res.status(403).json({ success: false, message: error.message });
+  }
+};
+
+export const getAdminReports = async (req, res) => {
+  try {
+    const { userId, range, date } = req.query;
+    const reports = await getAdminReportsService(userId, range, date);
+
+    res.json({ success: true, data: reports });
+  } catch (error) {
+    res.status(403).json({ success: false, message: error.message });
   }
 };

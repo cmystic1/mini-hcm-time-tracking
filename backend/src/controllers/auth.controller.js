@@ -1,4 +1,21 @@
-import { registerUser } from "../services/auth.service.js";
+import { getUserProfileService, registerUser } from "../services/auth.service.js";
+
+export const getProfile = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const profile = await getUserProfileService(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: profile,
+    });
+  } catch (error) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 export const register = async (req, res) => {
   try {

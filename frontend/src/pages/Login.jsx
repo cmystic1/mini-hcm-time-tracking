@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import AuthLayout from "../components/AuthLayout";
+import api from "../services/api";
 
 function Login() {
     const navigate = useNavigate();
@@ -21,7 +22,17 @@ function Login() {
                 password
             );
 
+            let profile = {};
+            try {
+                const profileRes = await api.get(`/auth/profile?userId=${userCredential.user.uid}`);
+                profile = profileRes.data?.data || {};
+            } catch (profileError) {
+                console.warn("Profile lookup failed, continuing with defaults.", profileError);
+            }
+
             localStorage.setItem("userId", userCredential.user.uid);
+            localStorage.setItem("userRole", profile.role || "employee");
+            localStorage.setItem("userName", profile.name || userCredential.user.email || "User");
 
             toast.success("Logged in Successfully");
 

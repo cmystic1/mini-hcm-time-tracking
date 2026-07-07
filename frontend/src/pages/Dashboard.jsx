@@ -11,6 +11,9 @@ import {
   punchOut,
   getToday,
   getHistory,
+  getAdminAttendance,
+  getAdminReports,
+  updateAttendance,
 } from "../services/attendanceService";
 
 import DashboardHeader from "../components/DashboardHeader";
@@ -25,9 +28,27 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [today, setToday] = useState(null);
   const [history, setHistory] = useState([]);
+  const [adminRecords, setAdminRecords] = useState([]);
+  const [adminReports, setAdminReports] = useState([]);
+  const [reportRange, setReportRange] = useState("daily");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [reportDate, setReportDate] = useState(new Date().toISOString().split("T")[0]);
+  const [editingAttendanceId, setEditingAttendanceId] = useState(null);
+  const [editValues, setEditValues] = useState({ timeIn: "", timeOut: "" });
 
   const hasPunchedIn = !!today?.timeIn;
   const hasPunchedOut = !!today?.timeOut;
+  const isAdmin = localStorage.getItem("userRole") === "admin";
+
+  const filteredAdminRecords = adminRecords.filter((item) => {
+    const query = searchTerm.toLowerCase();
+    return !query || [item.userName, item.userId, item.email].filter(Boolean).some((value) => String(value).toLowerCase().includes(query));
+  });
+
+  const filteredAdminReports = adminReports.filter((item) => {
+    const query = searchTerm.toLowerCase();
+    return !query || [item.userName, item.userId, item.email].filter(Boolean).some((value) => String(value).toLowerCase().includes(query));
+  });
 
   useEffect(() => {
     if (!userId) {
@@ -55,6 +76,22 @@ function Dashboard() {
       setHistory([]);
     }
 
+    if (isAdmin) {
+      try {
+        const adminRes = await getAdminAttendance(userId);
+        setAdminRecords(adminRes.data.data || []);
+      } catch (error) {
+        setAdminRecords([]);
+      }
+
+      try {
+        const reportsRes = await getAdminReports(userId, reportRange, reportDate);
+        setAdminReports(reportsRes.data.data || []);
+      } catch (error) {
+        setAdminReports([]);
+      }
+    }
+
     setLoading(false);
   };
 
@@ -76,6 +113,48 @@ function Dashboard() {
 
       toast.success("Punch Out Successful");
 
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
+    }
+  };
+
+  const handleReportChange = async (range, date) => {
+    setReportRange(range);
+    setReportDate(date);
+
+    if (!isAdmin) return;
+
+    try {
+      const reportsRes = await getAdminReports(userId, range, date);
+      setAdminReports(reportsRes.data.data || []);
+    } catch (error) {
+      setAdminReports([]);
+    }
+  };
+
+  const startEdit = (item) => {
+    setEditingAttendanceId(item.id || item.date);
+    setEditValues({
+      timeIn: item.timeIn ? new Date(item.timeIn._seconds ? item.timeIn._seconds * 1000 : item.timeIn).toISOString().slice(0, 16) : "",
+      timeOut: item.timeOut ? new Date(item.timeOut._seconds ? item.timeOut._seconds * 1000 : item.timeOut).toISOString().slice(0, 16) : "",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingAttendanceId(null);
+    setEditValues({ timeIn: "", timeOut: "" });
+  };
+
+  const saveEdit = async (attendanceId) => {
+    try {
+      await updateAttendance(userId, attendanceId, {
+        timeIn: editValues.timeIn ? new Date(editValues.timeIn).toISOString() : null,
+        timeOut: editValues.timeOut ? new Date(editValues.timeOut).toISOString() : null,
+      });
+
+      toast.success("Attendance updated successfully.");
+      cancelEdit();
       loadData();
     } catch (error) {
       toast.error(error.response?.data?.message || error.message);
@@ -146,6 +225,108 @@ function Dashboard() {
         today={today}
         formatTimestamp={formatTimestamp}
       />
+
+      {isAdmin && (
+        <div className="mt-5">
+          <h4 className="mb-3">Admin Attendance Overview</h4>
+
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search by name, email, or user ID"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              style={{ maxWidth: "320px" }}
+            />
+            <button className={`btn ${reportRange === "daily" ? "btn-primary" : "btn-outline-primary"}`} onClick={() => handleReportChange("daily", reportDate)}>
+              Daily Report
+            </button>
+            <button className={`btn ${reportRange === "weekly" ? "btn-primary" : "btn-outline-primary"}`} onClick={() => handleReportChange("weekly", reportDate)}>
+              Weekly Report
+            </button>
+            <input
+              type="date"
+              className="form-control"
+              style={{ maxWidth: "220px" }}
+              value={reportDate}
+              onChange={(event) => handleReportChange(reportRange, event.target.value)}
+            />
+          </div>
+
+          <div className="table-responsive mb-4">
+            <table className="table table-bordered table-striped">
+              <thead className="table-dark">
+                <tr>
+                  <th>User</th>
+                  <th>Date</th>
+                  <th>Regular</th>
+                  <th>OT</th>
+                  <th>ND</th>
+                  <th>Late</th>
+                  <th>Undertime</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAdminReports.length === 0 ? (
+                  <tr><td colSpan="7" className="text-center">No admin reports available.</td></tr>
+                ) : (
+                  filteredAdminReports.map((item) => (
+                    <tr key={item.id || item.date}>
+                      <td>{item.userName || item.userId}</td>
+                      <td>{item.date}</td>
+                      <td>{item.regularHours?.toFixed(2) ?? "0.00"} hrs</td>
+                      <td>{item.overtimeHours?.toFixed(2) ?? "0.00"} hrs</td>
+                      <td>{item.nightDifferentialHours?.toFixed(2) ?? "0.00"} hrs</td>
+                      <td>{item.lateMinutes?.toFixed(0) ?? "0"} mins</td>
+                      <td>{item.undertimeMinutes?.toFixed(0) ?? "0"} mins</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <h5 className="mb-3">All Punch Records</h5>
+          <div className="table-responsive">
+            <table className="table table-bordered table-striped">
+              <thead className="table-secondary">
+                <tr>
+                  <th>User</th>
+                  <th>Date</th>
+                  <th>Time In</th>
+                  <th>Time Out</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAdminRecords.length === 0 ? (
+                  <tr><td colSpan="5" className="text-center">No attendance records available.</td></tr>
+                ) : (
+                  filteredAdminRecords.map((item) => (
+                    <tr key={item.id || item.date}>
+                      <td>{item.userName || item.userId}</td>
+                      <td>{item.date}</td>
+                      <td>{editingAttendanceId === (item.id || item.date) ? <input type="datetime-local" className="form-control form-control-sm" value={editValues.timeIn} onChange={(event) => setEditValues({ ...editValues, timeIn: event.target.value })} /> : formatTimestamp(item.timeIn)}</td>
+                      <td>{editingAttendanceId === (item.id || item.date) ? <input type="datetime-local" className="form-control form-control-sm" value={editValues.timeOut} onChange={(event) => setEditValues({ ...editValues, timeOut: event.target.value })} /> : formatTimestamp(item.timeOut)}</td>
+                      <td>
+                        {editingAttendanceId === (item.id || item.date) ? (
+                          <div className="d-flex gap-2">
+                            <button className="btn btn-sm btn-success" onClick={() => saveEdit(item.id)}>Save</button>
+                            <button className="btn btn-sm btn-outline-secondary" onClick={cancelEdit}>Cancel</button>
+                          </div>
+                        ) : (
+                          <button className="btn btn-sm btn-outline-primary" onClick={() => startEdit(item)}>Edit</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <AttendanceHistory history={history} />
       <hr />
