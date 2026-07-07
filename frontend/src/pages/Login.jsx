@@ -3,6 +3,7 @@ import { auth } from "../firebase";
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "react-toastify";
+import AuthLayout from "../components/AuthLayout";
 
 function Login() {
     const navigate = useNavigate();
@@ -30,38 +31,65 @@ function Login() {
         }
     };
     return (
-        <div className="container mt-5">
-
-            <h2>Login</h2>
+        <AuthLayout title="Employee Login">
 
             <form onSubmit={login}>
 
-                <input
-                    className="form-control mb-3"
-                    placeholder="Email"
-                    onChange={(e) => setEmail(e.target.value)}
-                />
+                <div className="mb-3">
 
-                <input
-                    className="form-control mb-3"
-                    type="password"
-                    placeholder="Password"
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+                    <label className="form-label">
+                        Email
+                    </label>
 
-                <button className="btn btn-primary">
+                    <input
+                        className="form-control"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+
+                </div>
+
+                <div className="mb-4">
+
+                    <label className="form-label">
+                        Password
+                    </label>
+
+                    <input
+                        className="form-control"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+
+                </div>
+
+                <button
+                    className="btn btn-primary w-100"
+                >
                     Login
                 </button>
 
             </form>
 
-            <br />
+            <div className="text-center mt-4">
 
-            <Link to="/register">
-                Create Account
-            </Link>
+                <small>
+                    Don't have an account?
+                </small>
 
-        </div>
+                <br />
+
+                <Link to="/register">
+                    Create Account
+                </Link>
+
+            </div>
+
+        </AuthLayout>
     );
 }
 

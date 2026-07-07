@@ -2,20 +2,17 @@
 
 ## Features
 
-- User Registration
-- User Login
+- Employee Registration
+- Employee Login
 - Punch In
 - Punch Out
 - Attendance History
 - Attendance Summary
-- Firebase Authentication
-- Firestore Database
 
 ## Tech Stack
 
 Frontend
 - React
-- Vite
 - Bootstrap
 - Firebase Authentication
 
@@ -27,12 +24,12 @@ Backend
 
 ## Installation
 
-Frontend
+### Backend
 
 npm install
 npm run dev
 
-Backend
+### Frontend
 
 npm install
 npm run dev
