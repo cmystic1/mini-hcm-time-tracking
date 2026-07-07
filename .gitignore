@@ -16,7 +16,7 @@ pnpm-debug.log*
 backend/credentials/
 backend/.env
 frontend/.env
-fronend/.dist
+frontend/.dist
 .venv/
 .tmp_extract.py
 
